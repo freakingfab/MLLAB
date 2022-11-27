@@ -1,0 +1,178 @@
+
+
+    import numpy as np
+    import pandas as pd
+    import seaborn as sns
+    %matplotlib inline
+
+    import category_encoders as ce
+
+    from sklearn.model_selection import train_test_split
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.metrics import accuracy_score
+    from sklearn.model_selection import KFold
+    from sklearn import base
+
+    df_train=pd.read_csv('train.csv')
+    df_test=pd.read_csv('test.csv')
+
+    print('train data set has got {} rows and {} columns'.format(df_train.shape[0],df_train.shape[1]))
+    print('test data set has got {} rows and {} columns'.format(df_test.shape[0],df_test.shape[1]))
+
+    train data set has got 300000 rows and 25 columns
+    test data set has got 200000 rows and 24 columns
+
+    df_train.info()
+
+    <class 'pandas.core.frame.DataFrame'>
+    RangeIndex: 300000 entries, 0 to 299999
+    Data columns (total 25 columns):
+     #   Column  Non-Null Count   Dtype 
+    ---  ------  --------------   ----- 
+     0   id      300000 non-null  int64 
+     1   bin_0   300000 non-null  int64 
+     2   bin_1   300000 non-null  int64 
+     3   bin_2   300000 non-null  int64 
+     4   bin_3   300000 non-null  object
+     5   bin_4   300000 non-null  object
+     6   nom_0   300000 non-null  object
+     7   nom_1   300000 non-null  object
+     8   nom_2   300000 non-null  object
+     9   nom_3   300000 non-null  object
+     10  nom_4   300000 non-null  object
+     11  nom_5   300000 non-null  object
+     12  nom_6   300000 non-null  object
+     13  nom_7   300000 non-null  object
+     14  nom_8   300000 non-null  object
+     15  nom_9   300000 non-null  object
+     16  ord_0   300000 non-null  int64 
+     17  ord_1   300000 non-null  object
+     18  ord_2   300000 non-null  object
+     19  ord_3   300000 non-null  object
+     20  ord_4   300000 non-null  object
+     21  ord_5   300000 non-null  object
+     22  day     300000 non-null  int64 
+     23  month   300000 non-null  int64 
+     24  target  300000 non-null  int64 
+    dtypes: int64(8), object(17)
+    memory usage: 57.2+ MB
+
+    X=df_train.drop(['target'],axis=1)
+    y=df_train['target']
+
+    #Label Encodeing
+    from sklearn.preprocessing import LabelEncoder
+
+    train=pd.DataFrame()
+    label=LabelEncoder()
+    for c in  X.columns:
+        if(X[c].dtype=='object'):
+            train[c]=label.fit_transform(X[c])
+        else:
+            train[c]=X[c]
+            
+    train.head(3) 
+
+       id  bin_0  bin_1  bin_2  bin_3  bin_4  nom_0  nom_1  nom_2  nom_3  ...  \
+    0   0      0      0      0      1      1      1      5      5      3  ...   
+    1   1      0      1      0      1      1      1      4      3      5  ...   
+    2   2      0      0      0      0      1      0      4      4      5  ...   
+
+       nom_8  nom_9  ord_0  ord_1  ord_2  ord_3  ord_4  ord_5  day  month  
+    0   1686   2175      2      2      1      7      3    136    2      2  
+    1    650  11635      1      2      3      0      0     93    7      8  
+    2   1932   8078      1      1      4      7     17     31    7      2  
+
+    [3 rows x 24 columns]
+
+    print('train data set has got {} rows and {} columns'.format(train.shape[0],train.shape[1]))
+
+    train data set has got 300000 rows and 24 columns
+
+    #One-hot Encoding
+    from sklearn.preprocessing import OneHotEncoder
+
+    one=OneHotEncoder()
+
+    one.fit(X)
+    train=one.transform(X)
+
+    print('train data set has got {} rows and {} columns'.format(train.shape[0],train.shape[1]))
+
+    train data set has got 300000 rows and 316461 columns
+
+    #Feature Hashing
+    from sklearn.feature_extraction import FeatureHasher
+
+    X_train_hash=X.copy()
+    for c in X.columns:
+        X_train_hash[c]=X[c].astype('str')      
+    hashing=FeatureHasher(input_type='string')
+    train=hashing.transform(X_train_hash.values)
+    print('train data set has got {} rows and {} columns'.format(train.shape[0],train.shape[1]))
+
+    train data set has got 300000 rows and 1048576 columns
+
+    #Binary Encoding
+    X_target=df_train.copy()
+    encoder= ce.BinaryEncoder(cols=['month'])
+    data=encoder.fit_transform(X_target) 
+    data.head(3)
+
+       id  bin_0  bin_1  bin_2 bin_3 bin_4  nom_0      nom_1    nom_2    nom_3  \
+    0   0      0      0      0     T     Y  Green   Triangle    Snake  Finland   
+    1   1      0      1      0     T     Y  Green  Trapezoid  Hamster   Russia   
+    2   2      0      0      0     F     Y   Blue  Trapezoid     Lion   Russia   
+
+       ...     ord_2 ord_3 ord_4 ord_5 day month_0  month_1 month_2 month_3 target  
+    0  ...      Cold     h     D    kr   2       0        0       0       1      0  
+    1  ...       Hot     a     A    bF   7       0        0       1       0      0  
+    2  ...  Lava Hot     h     R    Jc   7       0        0       0       1      0  
+
+    [3 rows x 28 columns]
+
+    #Base-N Encoding
+    X_target=df_train.copy()
+    encoder= ce.BaseNEncoder(cols=['month'],base=5)
+
+    #Fit and Transform Data
+    data_encoded=encoder.fit_transform(X_target)
+    data_encoded.head(3)
+
+       id  bin_0  bin_1  bin_2 bin_3 bin_4  nom_0      nom_1    nom_2    nom_3  \
+    0   0      0      0      0     T     Y  Green   Triangle    Snake  Finland   
+    1   1      0      1      0     T     Y  Green  Trapezoid  Hamster   Russia   
+    2   2      0      0      0     F     Y   Blue  Trapezoid     Lion   Russia   
+
+       ... ord_0        ord_1     ord_2 ord_3 ord_4 ord_5  day month_0 month_1  \
+    0  ...     2  Grandmaster      Cold     h     D    kr    2       0       1   
+    1  ...     1  Grandmaster       Hot     a     A    bF    7       0       2   
+    2  ...     1       Expert  Lava Hot     h     R    Jc    7       0       1   
+
+      target  
+    0      0  
+    1      0  
+    2      0  
+
+    [3 rows x 26 columns]
+
+    #Target Encoding
+    encoder=ce.TargetEncoder(cols='month') 
+
+    #Fit and Transform Train Data
+    encoder.fit_transform(X_target['month'],X_target['day'])
+
+               month
+    0       2.997020
+    1       3.022904
+    2       2.997020
+    3       3.022816
+    4       3.022904
+    ...          ...
+    299995  3.022904
+    299996  2.997020
+    299997  2.992799
+    299998  3.022904
+    299999  3.008613
+
+    [300000 rows x 1 columns]
